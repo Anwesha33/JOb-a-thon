@@ -1,8 +1,12 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { api } from "./api.js";
 import ResumeUpload from "./components/ResumeUpload.jsx";
 import SearchForm from "./components/SearchForm.jsx";
 import OpportunityList from "./components/OpportunityList.jsx";
+import ApplyPanel from "./components/ApplyPanel.jsx";
+import QuestionModal from "./components/QuestionModal.jsx";
+
+const TERMINAL = new Set(["done", "error"]);
 
 export default function App() {
   const [profile, setProfile] = useState(null);
@@ -12,10 +16,44 @@ export default function App() {
   const [searching, setSearching] = useState(false);
   const [error, setError] = useState("");
 
+  const [jobs, setJobs] = useState({}); // oppId -> job
+  const [questionQueue, setQuestionQueue] = useState([]); // {oppId, company, title, question}
+  const seenQuestions = useRef(new Set()); // `${oppId}::${question}` already queued
+
   useEffect(() => {
     api.budget().then(setBudget).catch(() => {});
     api.listOpportunities().then(setOpportunities).catch(() => {});
   }, []);
+
+  // Poll any non-terminal apply jobs.
+  useEffect(() => {
+    const active = Object.values(jobs).filter((j) => !TERMINAL.has(j.status));
+    if (active.length === 0) return;
+    const timer = setInterval(async () => {
+      for (const j of active) {
+        try {
+          const s = await api.applyStatus(j.jobId);
+          setJobs((prev) => ({
+            ...prev,
+            [j.oppId]: { ...prev[j.oppId], status: s.status, message: s.message },
+          }));
+          for (const q of s.pending_questions || []) {
+            const key = `${j.oppId}::${q}`;
+            if (!seenQuestions.current.has(key)) {
+              seenQuestions.current.add(key);
+              setQuestionQueue((prev) => [
+                ...prev,
+                { oppId: j.oppId, company: j.company, title: j.title, question: q },
+              ]);
+            }
+          }
+        } catch (_) {
+          /* keep polling */
+        }
+      }
+    }, 2500);
+    return () => clearInterval(timer);
+  }, [jobs]);
 
   async function handleSearch(payload) {
     if (!profile) {
@@ -51,6 +89,43 @@ export default function App() {
     setSelected(checked ? new Set(opportunities.map((o) => o.id)) : new Set());
   }
 
+  async function applySelected() {
+    if (!profile || selected.size === 0) return;
+    setError("");
+    const chosen = opportunities.filter((o) => selected.has(o.id));
+    for (const o of chosen) {
+      if (jobs[o.id]) continue; // already applying
+      try {
+        const res = await api.startApply({
+          opportunity_id: o.id,
+          profile_id: profile.id,
+        });
+        setJobs((prev) => ({
+          ...prev,
+          [o.id]: {
+            oppId: o.id,
+            jobId: res.job_id,
+            company: o.company,
+            title: o.title,
+            status: res.status,
+            message: "",
+          },
+        }));
+      } catch (err) {
+        setError(`Couldn't start apply for ${o.company}: ${err.message}`);
+      }
+    }
+  }
+
+  async function saveAnswer(item, answer) {
+    await api.answerQuestion(item.question, answer);
+    setQuestionQueue((prev) => prev.filter((q) => q !== item));
+  }
+
+  function skipAnswer(item) {
+    setQuestionQueue((prev) => prev.filter((q) => q !== item));
+  }
+
   return (
     <div className="app">
       <header className="topbar">
@@ -75,7 +150,18 @@ export default function App() {
         onToggleAll={toggleAll}
       >
         <span className="selected-count">{selected.size} selected</span>
+        <button onClick={applySelected} disabled={selected.size === 0}>
+          Apply to selected ({selected.size})
+        </button>
       </OpportunityList>
+
+      <ApplyPanel jobs={jobs} />
+
+      <QuestionModal
+        item={questionQueue[0]}
+        onSave={saveAnswer}
+        onSkip={() => skipAnswer(questionQueue[0])}
+      />
     </div>
   );
 }
