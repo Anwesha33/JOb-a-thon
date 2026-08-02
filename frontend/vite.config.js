@@ -8,7 +8,9 @@ export default defineConfig({
   server: {
     port: 5173,
     proxy: {
-      "/api": "http://localhost:8000",
+      // Force IPv4 — `localhost` can resolve to ::1 and miss a backend bound
+      // only to 127.0.0.1.
+      "/api": "http://127.0.0.1:8000",
     },
   },
 });
