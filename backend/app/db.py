@@ -81,5 +81,15 @@ def init_db() -> None:
                 discovered_at TEXT NOT NULL DEFAULT (datetime('now')),
                 UNIQUE (source, external_id)
             );
+
+            -- Answers the user supplied for questions not derivable from the
+            -- resume. Kept for a week so the user isn't asked twice.
+            CREATE TABLE IF NOT EXISTS question_cache (
+                question_key TEXT PRIMARY KEY,
+                question     TEXT NOT NULL,
+                answer       TEXT NOT NULL,
+                created_at   TEXT NOT NULL DEFAULT (datetime('now')),
+                expires_at   TEXT NOT NULL
+            );
             """
         )

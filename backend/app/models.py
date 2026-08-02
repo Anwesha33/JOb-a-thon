@@ -111,3 +111,26 @@ class AnswerResponse(BaseModel):
     answer: str
     source: str  # "llm" or "template"
 
+
+class QuestionResolveRequest(BaseModel):
+    question: str
+    profile_id: int
+    opportunity_id: Optional[int] = None
+
+
+class QuestionResolveResponse(BaseModel):
+    question: str
+    answer: Optional[str] = None
+    needs_input: bool
+    source: str  # "profile" | "cache" | "resume" | "user"
+
+
+class QuestionAnswerRequest(BaseModel):
+    question: str
+    answer: str
+
+
+class QuestionAnswerResponse(BaseModel):
+    stored: bool
+    expires_at: str
+
