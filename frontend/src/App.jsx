@@ -68,7 +68,12 @@ export default function App() {
       setBudget(res.budget);
       setSelected(new Set());
       if (res.count === 0) {
-        setError("No fresh openings found. Try a broader role or location.");
+        setError(
+          res.budget?.remaining === 0
+            ? `Today's company budget is used up (${res.budget.limit}/${res.budget.limit}). ` +
+              "New companies unlock tomorrow — or raise DAILY_COMPANY_LIMIT in .env."
+            : "No fresh openings found. Try a broader role or location."
+        );
       }
     } catch (err) {
       setError(err.message);
