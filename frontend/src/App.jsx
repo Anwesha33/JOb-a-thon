@@ -147,7 +147,12 @@ export default function App() {
       {error && <div className="banner error">{error}</div>}
 
       <ResumeUpload profile={profile} onProfile={setProfile} />
-      <SearchForm disabled={!profile} busy={searching} onSearch={handleSearch} />
+      <SearchForm
+        disabled={!profile}
+        busy={searching}
+        onSearch={handleSearch}
+        detectedExperience={profile?.experience_years}
+      />
       <OpportunityList
         opportunities={opportunities}
         selected={selected}

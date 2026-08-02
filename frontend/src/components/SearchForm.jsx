@@ -2,20 +2,23 @@ import { useState } from "react";
 
 // Role, location, and (optional) specific companies are all entered here, so
 // the tool stays generic — nothing about the search is hardcoded.
-export default function SearchForm({ disabled, onSearch, busy }) {
+export default function SearchForm({ disabled, onSearch, busy, detectedExperience }) {
   const [role, setRole] = useState("");
   const [location, setLocation] = useState("");
   const [country, setCountry] = useState("in");
   const [companies, setCompanies] = useState("");
   const [limit, setLimit] = useState(100);
+  const [experience, setExperience] = useState("");
 
   function submit(e) {
     e.preventDefault();
+    const exp = experience.trim();
     onSearch({
       role: role.trim() || null,
       location: location.trim() || null,
       country: country.trim() || null,
       limit: Number(limit) || 100,
+      experience_years: exp === "" ? null : Number(exp),
       companies: companies
         .split(",")
         .map((c) => c.trim())
@@ -60,6 +63,22 @@ export default function SearchForm({ disabled, onSearch, busy }) {
           />
         </label>
         <label>
+          Years of experience
+          <input
+            type="number"
+            min="0"
+            max="50"
+            step="0.5"
+            value={experience}
+            onChange={(e) => setExperience(e.target.value)}
+            placeholder={
+              detectedExperience != null
+                ? `blank uses resume (~${detectedExperience} yrs)`
+                : "blank uses your resume"
+            }
+          />
+        </label>
+        <label>
           Target count
           <input
             type="number"
@@ -74,8 +93,8 @@ export default function SearchForm({ disabled, onSearch, busy }) {
         </button>
       </form>
       <p className="hint">
-        Only openings posted in the last 30 days are shown, and at most 10 new
-        companies are searched per day.
+        Only openings posted in the last 30 days are shown. Experience filters
+        out openings that are clearly the wrong seniority.
       </p>
     </section>
   );

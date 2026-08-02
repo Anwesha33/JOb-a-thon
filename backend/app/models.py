@@ -22,6 +22,7 @@ class Profile(BaseModel):
     phone: Optional[str] = None
     location: Optional[str] = None
     headline: Optional[str] = None
+    experience_years: Optional[float] = None
     skills: list[str] = Field(default_factory=list)
     roles: list[str] = Field(default_factory=list)
     summary: Optional[str] = None
@@ -93,6 +94,8 @@ class SearchRequest(BaseModel):
     profile_id: Optional[int] = None
     limit: int = 100
     country: Optional[str] = None
+    # Candidate's years of experience. If null, the resume's estimate is used.
+    experience_years: Optional[float] = None
 
 
 class SearchResponse(BaseModel):

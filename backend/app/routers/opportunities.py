@@ -18,11 +18,15 @@ async def search(req: SearchRequest) -> SearchResponse:
     settings = get_settings()
 
     keywords: list[str] = []
+    experience_years = req.experience_years
     if req.profile_id is not None:
         profile = profiles.get_profile(req.profile_id)
         if profile is None:
             raise HTTPException(status_code=404, detail="Profile not found.")
         keywords = profile.search_keywords()
+        # Fall back to the resume's estimate when not explicitly provided.
+        if experience_years is None:
+            experience_years = profile.experience_years
 
     try:
         raw = await discovery.discover(
@@ -33,6 +37,7 @@ async def search(req: SearchRequest) -> SearchResponse:
             limit=req.limit,
             max_days_old=settings.freshness_days,
             country=req.country,
+            experience_years=experience_years,
         )
     except AdzunaError as exc:
         raise HTTPException(status_code=502, detail=str(exc)) from exc

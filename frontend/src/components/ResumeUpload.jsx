@@ -37,6 +37,9 @@ export default function ResumeUpload({ profile, onProfile }) {
         <div className="profile-summary">
           <strong>{profile.name || "Resume loaded"}</strong>
           {profile.headline && <span> · {profile.headline}</span>}
+          {profile.experience_years != null && (
+            <span> · ~{profile.experience_years} yrs experience</span>
+          )}
           {profile.skills?.length > 0 && (
             <div className="chips">
               {profile.skills.slice(0, 12).map((s) => (

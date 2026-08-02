@@ -10,7 +10,7 @@ from datetime import date
 from typing import Optional
 
 from ..models import Opportunity
-from . import adzuna
+from . import adzuna, experience
 
 
 def build_queries(role: Optional[str], keywords: Optional[list[str]]) -> list[str]:
@@ -44,12 +44,14 @@ async def discover(
     limit: int = 100,
     max_days_old: int = 30,
     country: Optional[str] = None,
+    experience_years: Optional[float] = None,
 ) -> list[Opportunity]:
     """Search and return up to `limit` fresh, de-duplicated openings.
 
     If `companies` is given, the search is restricted to those companies
     (one targeted query each). Otherwise it fans the derived queries across
-    whatever companies the aggregator returns.
+    whatever companies the aggregator returns. When `experience_years` is set,
+    openings whose title is clearly the wrong seniority are dropped.
     """
     queries = build_queries(role, keywords)
     seen_ids: set[str] = set()
@@ -59,6 +61,8 @@ async def discover(
         """Add new results; return True once the limit is reached."""
         for opp in results:
             if opp.external_id in seen_ids:
+                continue
+            if not experience.is_compatible(experience_years, opp.title):
                 continue
             seen_ids.add(opp.external_id)
             found.append(opp)

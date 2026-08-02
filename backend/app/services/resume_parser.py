@@ -10,6 +10,7 @@ import io
 import re
 
 from ..models import Profile
+from .experience import estimate_years
 
 EMAIL_RE = re.compile(r"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}")
 # Fairly permissive international-ish phone matcher.
@@ -102,6 +103,7 @@ def parse_resume(filename: str, data: bytes) -> Profile:
         email=email,
         phone=phone,
         headline=headline,
+        experience_years=estimate_years(text),
         roles=[headline] if headline else [],
         skills=skills,
         summary=None,
