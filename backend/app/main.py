@@ -12,6 +12,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from . import __version__
 from .config import get_settings
 from .db import init_db
+from .routers import resume
 
 
 @asynccontextmanager
@@ -38,6 +39,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+app.include_router(resume.router)
 
 
 @app.get("/api/health")

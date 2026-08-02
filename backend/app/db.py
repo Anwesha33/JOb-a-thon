@@ -46,5 +46,12 @@ def init_db() -> None:
                 key   TEXT PRIMARY KEY,
                 value TEXT NOT NULL
             );
+
+            CREATE TABLE IF NOT EXISTS resumes (
+                id              INTEGER PRIMARY KEY AUTOINCREMENT,
+                source_filename TEXT NOT NULL,
+                profile_json    TEXT NOT NULL,
+                created_at      TEXT NOT NULL DEFAULT (datetime('now'))
+            );
             """
         )
