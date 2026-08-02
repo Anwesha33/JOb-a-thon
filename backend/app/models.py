@@ -66,3 +66,36 @@ class Opportunity(BaseModel):
             return None
         return (date.today() - self.posted_date).days
 
+
+# Application-pipeline status for a stored opportunity.
+STATUS_NEW = "new"
+STATUS_SELECTED = "selected"
+STATUS_APPLIED = "applied"
+STATUS_NEEDS_INPUT = "needs_input"
+STATUS_ERROR = "error"
+
+
+class StoredOpportunity(Opportunity):
+    """An opportunity persisted in the DB, with an internal id and status."""
+
+    id: int
+    status: str = STATUS_NEW
+    discovered_at: Optional[str] = None
+
+
+class SearchRequest(BaseModel):
+    """Parameters for a discovery run — all supplied from the UI."""
+
+    role: Optional[str] = None
+    location: Optional[str] = None
+    companies: list[str] = Field(default_factory=list)
+    profile_id: Optional[int] = None
+    limit: int = 100
+    country: Optional[str] = None
+
+
+class SearchResponse(BaseModel):
+    opportunities: list[StoredOpportunity]
+    budget: dict
+    count: int
+

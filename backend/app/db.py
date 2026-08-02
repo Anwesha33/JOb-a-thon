@@ -63,5 +63,23 @@ def init_db() -> None:
                 first_seen_at TEXT NOT NULL DEFAULT (datetime('now')),
                 PRIMARY KEY (day, company_key)
             );
+
+            CREATE TABLE IF NOT EXISTS opportunities (
+                id            INTEGER PRIMARY KEY AUTOINCREMENT,
+                source        TEXT NOT NULL,
+                external_id   TEXT NOT NULL,
+                title         TEXT NOT NULL,
+                company       TEXT NOT NULL,
+                location      TEXT,
+                posted_date   TEXT,
+                url           TEXT NOT NULL,
+                description   TEXT,
+                salary_min    REAL,
+                salary_max    REAL,
+                contract_time TEXT,
+                status        TEXT NOT NULL DEFAULT 'new',
+                discovered_at TEXT NOT NULL DEFAULT (datetime('now')),
+                UNIQUE (source, external_id)
+            );
             """
         )

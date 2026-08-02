@@ -40,31 +40,58 @@ async def discover(
     role: Optional[str] = None,
     location: Optional[str] = None,
     keywords: Optional[list[str]] = None,
+    companies: Optional[list[str]] = None,
     limit: int = 100,
     max_days_old: int = 30,
     country: Optional[str] = None,
 ) -> list[Opportunity]:
-    """Search across the derived queries and return up to `limit` fresh,
-    de-duplicated openings, newest first."""
+    """Search and return up to `limit` fresh, de-duplicated openings.
+
+    If `companies` is given, the search is restricted to those companies
+    (one targeted query each). Otherwise it fans the derived queries across
+    whatever companies the aggregator returns.
+    """
     queries = build_queries(role, keywords)
     seen_ids: set[str] = set()
     found: list[Opportunity] = []
 
-    for query in queries:
-        results = await adzuna.search_jobs(
-            what=query,
-            where=location,
-            max_days_old=max_days_old,
-            country=country,
-        )
+    def take(results: list[Opportunity]) -> bool:
+        """Add new results; return True once the limit is reached."""
         for opp in results:
             if opp.external_id in seen_ids:
                 continue
             seen_ids.add(opp.external_id)
             found.append(opp)
             if len(found) >= limit:
-                _sort_newest_first(found)
-                return found
+                return True
+        return False
+
+    cleaned_companies = [c.strip() for c in (companies or []) if c and c.strip()]
+
+    if cleaned_companies:
+        # Targeted: one query (the primary term) per named company.
+        primary = queries[0]
+        for company in cleaned_companies:
+            results = await adzuna.search_jobs(
+                what=primary,
+                where=location,
+                company=company,
+                max_days_old=max_days_old,
+                country=country,
+            )
+            if take(results):
+                break
+    else:
+        # Broad: fan every derived query across all companies.
+        for query in queries:
+            results = await adzuna.search_jobs(
+                what=query,
+                where=location,
+                max_days_old=max_days_old,
+                country=country,
+            )
+            if take(results):
+                break
 
     _sort_newest_first(found)
     return found
