@@ -14,10 +14,6 @@ It is deliberately **assisted**, not fully silent: the browser fills everything 
 - **Daily budget:** discovery looks at at most **10 new companies per calendar day**, so you build a steady pipeline instead of a spammy blast.
 - **Question memory:** if an application asks something that isn't in your resume, the tool asks you **once**, then remembers your answer for **7 days** so you're not retyping it.
 
-## Status
-
-Early scaffold. Features land one per commit — see the git history for the build order.
-
 ## Layout
 
 ```
@@ -29,4 +25,24 @@ docs/       Setup notes (API keys, Playwright)
 
 ## Getting started
 
-Setup instructions land with the launcher commit. In short: you'll need a free Adzuna API key, Python 3.11+, and Node 18+.
+You'll need Python 3.11+, Node 18+, and a free [Adzuna API key](https://developer.adzuna.com/). Then:
+
+```bash
+./scripts/run.sh
+```
+
+This installs dependencies, starts the backend and frontend, and opens the UI at
+<http://localhost:5173>. On first run it creates `.env` — add your Adzuna keys there.
+
+Full instructions (API keys, enabling the Playwright browser for assisted apply,
+troubleshooting) are in [`docs/SETUP.md`](docs/SETUP.md).
+
+## How it works
+
+1. **Upload** your resume — it's parsed into a profile (skills, contact, headline).
+2. **Search** by role/location, optionally restricted to companies you name. Only
+   openings from the last 30 days are surfaced, at most 10 new companies per day.
+3. **Select** the ones you want (or *Select all*).
+4. **Apply** — an assisted browser auto-fills each application from your resume and
+   drafts answers to open questions; you handle CAPTCHA and the final submit. Any
+   question it can't answer is asked once and remembered for a week.
