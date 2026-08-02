@@ -99,3 +99,15 @@ class SearchResponse(BaseModel):
     budget: dict
     count: int
 
+
+class AnswerRequest(BaseModel):
+    question: str
+    profile_id: int
+    opportunity_id: Optional[int] = None
+
+
+class AnswerResponse(BaseModel):
+    question: str
+    answer: str
+    source: str  # "llm" or "template"
+
