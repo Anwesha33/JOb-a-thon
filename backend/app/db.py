@@ -37,6 +37,13 @@ def get_conn() -> Iterator[sqlite3.Connection]:
         conn.close()
 
 
+def _ensure_column(conn, table: str, column: str, decl: str) -> None:
+    """Add a column to an existing table if it isn't already there."""
+    cols = [r["name"] for r in conn.execute(f"PRAGMA table_info({table})")]
+    if column not in cols:
+        conn.execute(f"ALTER TABLE {table} ADD COLUMN {column} {decl}")
+
+
 def init_db() -> None:
     """Create tables that don't exist yet. Safe to call on every startup."""
     with get_conn() as conn:
@@ -93,3 +100,5 @@ def init_db() -> None:
             );
             """
         )
+        # Migrations for tables that predate a column.
+        _ensure_column(conn, "opportunities", "applied_at", "TEXT")

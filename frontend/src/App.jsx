@@ -5,6 +5,7 @@ import SearchForm from "./components/SearchForm.jsx";
 import OpportunityList from "./components/OpportunityList.jsx";
 import ApplyPanel from "./components/ApplyPanel.jsx";
 import QuestionModal from "./components/QuestionModal.jsx";
+import Dashboard from "./components/Dashboard.jsx";
 
 const TERMINAL = new Set(["done", "error"]);
 
@@ -19,6 +20,9 @@ export default function App() {
   const [jobs, setJobs] = useState({}); // oppId -> job
   const [questionQueue, setQuestionQueue] = useState([]); // {oppId, company, title, question}
   const seenQuestions = useRef(new Set()); // `${oppId}::${question}` already queued
+
+  const [view, setView] = useState("search"); // "search" | "dashboard"
+  const [dashKey, setDashKey] = useState(0); // bump to refresh the dashboard
 
   useEffect(() => {
     api.budget().then(setBudget).catch(() => {});
@@ -120,6 +124,7 @@ export default function App() {
         setError(`Couldn't start apply for ${o.company}: ${err.message}`);
       }
     }
+    setDashKey((k) => k + 1); // newly-applied jobs appear on the dashboard
   }
 
   async function saveAnswer(item, answer) {
@@ -136,42 +141,65 @@ export default function App() {
       <header className="topbar">
         <h1>JOb-a-thon</h1>
         <p>Find recent openings from your resume, then apply to the ones you pick.</p>
-        {budget && (
+        {budget && view === "search" && (
           <div className="budget">
             Today's company budget: {budget.companies_used}/{budget.limit} used ·{" "}
             {budget.remaining} left
           </div>
         )}
+        <nav className="tabs">
+          <button
+            className={view === "search" ? "tab active" : "tab"}
+            onClick={() => setView("search")}
+          >
+            Find &amp; apply
+          </button>
+          <button
+            className={view === "dashboard" ? "tab active" : "tab"}
+            onClick={() => {
+              setView("dashboard");
+              setDashKey((k) => k + 1);
+            }}
+          >
+            Dashboard
+          </button>
+        </nav>
       </header>
 
       {error && <div className="banner error">{error}</div>}
 
-      <ResumeUpload profile={profile} onProfile={setProfile} />
-      <SearchForm
-        disabled={!profile}
-        busy={searching}
-        onSearch={handleSearch}
-        detectedExperience={profile?.experience_years}
-      />
-      <OpportunityList
-        opportunities={opportunities}
-        selected={selected}
-        onToggle={toggle}
-        onToggleAll={toggleAll}
-      >
-        <span className="selected-count">{selected.size} selected</span>
-        <button onClick={applySelected} disabled={selected.size === 0}>
-          Apply to selected ({selected.size})
-        </button>
-      </OpportunityList>
+      {view === "search" ? (
+        <>
+          <ResumeUpload profile={profile} onProfile={setProfile} />
+          <SearchForm
+            disabled={!profile}
+            busy={searching}
+            onSearch={handleSearch}
+            detectedExperience={profile?.experience_years}
+          />
+          <OpportunityList
+            opportunities={opportunities}
+            selected={selected}
+            onToggle={toggle}
+            onToggleAll={toggleAll}
+          >
+            <span className="selected-count">{selected.size} selected</span>
+            <button onClick={applySelected} disabled={selected.size === 0}>
+              Apply to selected ({selected.size})
+            </button>
+          </OpportunityList>
 
-      <ApplyPanel jobs={jobs} />
+          <ApplyPanel jobs={jobs} />
 
-      <QuestionModal
-        item={questionQueue[0]}
-        onSave={saveAnswer}
-        onSkip={() => skipAnswer(questionQueue[0])}
-      />
+          <QuestionModal
+            item={questionQueue[0]}
+            onSave={saveAnswer}
+            onSkip={() => skipAnswer(questionQueue[0])}
+          />
+        </>
+      ) : (
+        <Dashboard refreshKey={dashKey} />
+      )}
     </div>
   );
 }

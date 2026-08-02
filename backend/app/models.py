@@ -76,6 +76,9 @@ STATUS_APPLIED = "applied"
 STATUS_NEEDS_INPUT = "needs_input"
 STATUS_ERROR = "error"
 
+# Statuses the user can set from the applications dashboard, in pipeline order.
+APPLICATION_STATUSES = ["applied", "interviewing", "offer", "rejected"]
+
 
 class StoredOpportunity(Opportunity):
     """An opportunity persisted in the DB, with an internal id and status."""
@@ -83,6 +86,7 @@ class StoredOpportunity(Opportunity):
     id: int
     status: str = STATUS_NEW
     discovered_at: Optional[str] = None
+    applied_at: Optional[str] = None
 
 
 class SearchRequest(BaseModel):

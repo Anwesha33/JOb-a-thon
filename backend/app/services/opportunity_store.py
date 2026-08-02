@@ -13,7 +13,8 @@ from ..models import Opportunity, StoredOpportunity
 
 _COLUMNS = (
     "id, source, external_id, title, company, location, posted_date, url, "
-    "description, salary_min, salary_max, contract_time, status, discovered_at"
+    "description, salary_min, salary_max, contract_time, status, discovered_at, "
+    "applied_at"
 )
 
 
@@ -33,6 +34,7 @@ def _row_to_model(row) -> StoredOpportunity:
         contract_time=row["contract_time"],
         status=row["status"],
         discovered_at=row["discovered_at"],
+        applied_at=row["applied_at"],
     )
 
 
@@ -105,7 +107,25 @@ def get_opportunity(opp_id: int) -> Optional[StoredOpportunity]:
 
 
 def set_status(opp_id: int, status: str) -> None:
+    """Update status; stamp applied_at the first time it becomes 'applied'."""
     with get_conn() as conn:
-        conn.execute(
-            "UPDATE opportunities SET status = ? WHERE id = ?", (status, opp_id)
-        )
+        if status == "applied":
+            conn.execute(
+                "UPDATE opportunities SET status = ?, "
+                "applied_at = COALESCE(applied_at, datetime('now')) WHERE id = ?",
+                (status, opp_id),
+            )
+        else:
+            conn.execute(
+                "UPDATE opportunities SET status = ? WHERE id = ?", (status, opp_id)
+            )
+
+
+def list_applications() -> list[StoredOpportunity]:
+    """Everything the user has applied to, most recent first."""
+    with get_conn() as conn:
+        rows = conn.execute(
+            f"SELECT {_COLUMNS} FROM opportunities WHERE applied_at IS NOT NULL "
+            "ORDER BY applied_at DESC"
+        ).fetchall()
+    return [_row_to_model(r) for r in rows]

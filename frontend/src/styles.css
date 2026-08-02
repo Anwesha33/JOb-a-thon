@@ -336,3 +336,100 @@ button.ghost {
 button.ghost:hover {
   background: #12151c;
 }
+
+/* Tabs */
+.tabs {
+  display: flex;
+  gap: 8px;
+  margin-top: 14px;
+}
+.tab {
+  background: transparent;
+  border: 1px solid var(--line);
+  color: var(--muted);
+  padding: 8px 16px;
+  border-radius: 999px;
+  font-weight: 600;
+}
+.tab:hover {
+  background: #12151c;
+}
+.tab.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: white;
+}
+
+/* Dashboard */
+.summary-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.summary-chips .chip {
+  text-transform: capitalize;
+}
+.chip.total {
+  color: var(--text);
+  border-color: var(--accent);
+}
+.chip.status-applied {
+  color: var(--accent);
+}
+.chip.status-interviewing {
+  color: var(--warn);
+}
+.chip.status-offer {
+  color: var(--good);
+}
+.chip.status-rejected {
+  color: #ff6b6b;
+}
+
+.apps-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 12px;
+  font-size: 14px;
+}
+.apps-table th {
+  text-align: left;
+  color: var(--muted);
+  font-weight: 500;
+  font-size: 12px;
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--line);
+}
+.apps-table td {
+  padding: 10px;
+  border-bottom: 1px solid var(--line);
+  vertical-align: middle;
+}
+.apps-table .role-cell {
+  color: var(--muted);
+}
+.nowrap {
+  white-space: nowrap;
+}
+.status-select {
+  background: #12151c;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 5px 8px;
+  color: var(--text);
+  text-transform: capitalize;
+}
+.status-select.status-offer {
+  border-color: var(--good);
+}
+.status-select.status-rejected {
+  border-color: #ff6b6b;
+}
+.status-select.status-interviewing {
+  border-color: var(--warn);
+}
+.view-link {
+  color: var(--accent);
+  text-decoration: none;
+  font-size: 13px;
+}

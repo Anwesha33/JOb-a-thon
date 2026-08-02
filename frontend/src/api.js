@@ -56,4 +56,13 @@ export const api = {
     }),
 
   applyStatus: (jobId) => req(`/api/apply/${jobId}`),
+
+  listApplications: () => req("/api/applications"),
+
+  updateApplicationStatus: (opportunityId, status) =>
+    req(`/api/applications/${opportunityId}/status`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status }),
+    }),
 };
