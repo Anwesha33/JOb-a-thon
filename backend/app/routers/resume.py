@@ -1,8 +1,11 @@
 """Resume upload + retrieval endpoints."""
 from __future__ import annotations
 
+from pathlib import Path
+
 from fastapi import APIRouter, File, HTTPException, UploadFile
 
+from ..config import DATA_DIR
 from ..models import Profile
 from ..services import profiles
 from ..services.resume_parser import parse_resume
@@ -10,6 +13,7 @@ from ..services.resume_parser import parse_resume
 router = APIRouter(prefix="/api/resume", tags=["resume"])
 
 MAX_BYTES = 8 * 1024 * 1024  # 8 MB is plenty for a resume.
+UPLOAD_DIR = DATA_DIR / "uploads"
 
 
 @router.post("/upload", response_model=Profile)
@@ -30,7 +34,15 @@ async def upload_resume(file: UploadFile = File(...)) -> Profile:
             detail=f"Could not read that resume: {exc}",
         ) from exc
 
-    return profiles.save_profile(profile)
+    profile = profiles.save_profile(profile)
+
+    # Keep the original file so the apply engine can attach it to forms.
+    UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+    suffix = Path(file.filename or "resume").suffix or ".pdf"
+    dest = UPLOAD_DIR / f"{profile.id}{suffix}"
+    dest.write_bytes(data)
+    profile.resume_path = str(dest)
+    return profiles.update_profile(profile)
 
 
 @router.get("/{profile_id}", response_model=Profile)

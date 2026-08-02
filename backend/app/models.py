@@ -16,6 +16,7 @@ class Profile(BaseModel):
 
     id: Optional[int] = None
     source_filename: str = ""
+    resume_path: Optional[str] = None
     name: Optional[str] = None
     email: Optional[str] = None
     phone: Optional[str] = None

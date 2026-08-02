@@ -16,6 +16,18 @@ def save_profile(profile: Profile) -> Profile:
     return profile
 
 
+def update_profile(profile: Profile) -> Profile:
+    """Persist changes to an already-saved profile."""
+    if profile.id is None:
+        return save_profile(profile)
+    with get_conn() as conn:
+        conn.execute(
+            "UPDATE resumes SET profile_json = ? WHERE id = ?",
+            (profile.model_dump_json(), profile.id),
+        )
+    return profile
+
+
 def get_profile(profile_id: int) -> Profile | None:
     with get_conn() as conn:
         row = conn.execute(
