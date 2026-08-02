@@ -1,6 +1,7 @@
 """Shared pydantic schemas."""
 from __future__ import annotations
 
+from datetime import date
 from typing import Optional
 
 from pydantic import BaseModel, Field
@@ -42,3 +43,26 @@ class Profile(BaseModel):
                 seen.add(key)
                 out.append(kw.strip())
         return out
+
+
+class Opportunity(BaseModel):
+    """A single job opening, normalized from whatever source found it."""
+
+    source: str = "adzuna"
+    external_id: str
+    title: str
+    company: str
+    location: Optional[str] = None
+    posted_date: Optional[date] = None
+    url: str
+    description: Optional[str] = None
+    salary_min: Optional[float] = None
+    salary_max: Optional[float] = None
+    contract_time: Optional[str] = None
+
+    @property
+    def days_old(self) -> Optional[int]:
+        if self.posted_date is None:
+            return None
+        return (date.today() - self.posted_date).days
+
