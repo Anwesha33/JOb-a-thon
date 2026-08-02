@@ -10,7 +10,7 @@ from datetime import date
 from typing import Optional
 
 from ..models import Opportunity
-from . import adzuna, experience
+from . import adzuna, experience, role_match
 
 
 def build_queries(role: Optional[str], keywords: Optional[list[str]]) -> list[str]:
@@ -45,6 +45,7 @@ async def discover(
     max_days_old: int = 30,
     country: Optional[str] = None,
     experience_years: Optional[float] = None,
+    role_filter: Optional[str] = None,
 ) -> list[Opportunity]:
     """Search and return up to `limit` fresh, de-duplicated openings.
 
@@ -53,7 +54,11 @@ async def discover(
     whatever companies the aggregator returns. When `experience_years` is set,
     openings whose title is clearly the wrong seniority are dropped.
     """
-    queries = build_queries(role, keywords)
+    role_family = role_match.classify_role_family(role_filter)
+    # Broaden a narrow role (e.g. "SDE-1") with the family's general term so the
+    # aggregator returns a healthy pool; the title filter keeps it on-role.
+    extra = role_match.family_query_terms(role_family)
+    queries = build_queries(role, extra + (keywords or []))
     seen_ids: set[str] = set()
     found: list[Opportunity] = []
 
@@ -61,6 +66,8 @@ async def discover(
         """Add new results; return True once the limit is reached."""
         for opp in results:
             if opp.external_id in seen_ids:
+                continue
+            if not role_match.title_matches_role(opp.title, role_filter, role_family):
                 continue
             if not experience.is_compatible(experience_years, opp.title):
                 continue

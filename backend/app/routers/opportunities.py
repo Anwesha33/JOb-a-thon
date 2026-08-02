@@ -19,6 +19,9 @@ async def search(req: SearchRequest) -> SearchResponse:
 
     keywords: list[str] = []
     experience_years = req.experience_years
+    # The role used for relevance filtering: what the user typed, else their
+    # resume headline.
+    role_filter = req.role
     if req.profile_id is not None:
         profile = profiles.get_profile(req.profile_id)
         if profile is None:
@@ -27,6 +30,8 @@ async def search(req: SearchRequest) -> SearchResponse:
         # Fall back to the resume's estimate when not explicitly provided.
         if experience_years is None:
             experience_years = profile.experience_years
+        if not role_filter:
+            role_filter = profile.headline
 
     try:
         raw = await discovery.discover(
@@ -38,6 +43,7 @@ async def search(req: SearchRequest) -> SearchResponse:
             max_days_old=settings.freshness_days,
             country=req.country,
             experience_years=experience_years,
+            role_filter=role_filter,
         )
     except AdzunaError as exc:
         raise HTTPException(status_code=502, detail=str(exc)) from exc
