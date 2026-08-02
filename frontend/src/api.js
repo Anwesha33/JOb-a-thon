@@ -57,6 +57,13 @@ export const api = {
 
   applyStatus: (jobId) => req(`/api/apply/${jobId}`),
 
+  applyLink: (url, profileId) =>
+    req("/api/apply/link", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ url, profile_id: profileId }),
+    }),
+
   listApplications: () => req("/api/applications"),
 
   updateApplicationStatus: (opportunityId, status) =>

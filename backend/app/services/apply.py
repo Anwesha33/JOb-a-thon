@@ -131,17 +131,64 @@ _SCRAPE_JS = r"""
 """
 
 
-def run_assisted_apply(
-    job: ApplyJob,
-    opportunity: Opportunity,
+# LinkedIn "Apply" button selectors, most-specific first. On an external job the
+# click opens the company portal (often in a new tab); we follow it.
+_LINKEDIN_APPLY_SELECTORS = [
+    "a[href*='externalApply']",
+    "button.jobs-apply-button",
+    "a.apply-button",
+    "button[aria-label*='Apply' i]",
+    "a:has-text('Apply on company website')",
+    "button:has-text('Apply')",
+    "a:has-text('Apply')",
+]
+
+
+def _resolve_linkedin(context, page):
+    """From a LinkedIn job page, click Apply and follow to the company portal.
+
+    Returns the page now showing the external application (a new tab or the
+    same tab after navigation), or None if it stayed on LinkedIn — i.e. an
+    Easy Apply modal or a login wall, which the user must handle manually.
+    """
+    for selector in _LINKEDIN_APPLY_SELECTORS:
+        try:
+            el = page.query_selector(selector)
+        except Exception:
+            el = None
+        if el is None:
+            continue
+        # Case 1: opens the company portal in a new tab.
+        try:
+            with context.expect_page(timeout=8000) as popup_info:
+                el.click()
+            new_page = popup_info.value
+            new_page.wait_for_load_state("domcontentloaded", timeout=25000)
+            if "linkedin.com" not in new_page.url:
+                return new_page
+        except Exception:
+            # Case 2: same-tab navigation to the portal.
+            try:
+                page.wait_for_load_state("domcontentloaded", timeout=15000)
+            except Exception:
+                pass
+            if "linkedin.com" not in page.url:
+                return page
+    return None
+
+
+def _drive(
+    job: "ApplyJob",
+    start_url: str,
     profile: Profile,
+    opportunity: Optional[Opportunity],
     headless: bool = False,
 ) -> None:
-    """Drive a browser to autofill the application. Blocking — run in a thread.
+    """Open a URL, follow a LinkedIn apply link to the company portal if needed,
+    autofill the application, and pause for the human-only steps.
 
-    Degrades gracefully: if Playwright or its browser isn't available, the job
-    still records the fill plan it *would* have applied, so nothing is silently
-    lost.
+    Blocking — run in a thread. Degrades gracefully when Playwright or its
+    browser is unavailable.
     """
     try:
         from playwright.sync_api import sync_playwright
@@ -159,17 +206,33 @@ def run_assisted_apply(
     try:
         with sync_playwright() as pw:
             browser = pw.chromium.launch(headless=headless)
-            page = browser.new_page()
-            page.goto(opportunity.url, wait_until="domcontentloaded", timeout=45000)
+            context = browser.new_context()
+            page = context.new_page()
+            page.goto(start_url, wait_until="domcontentloaded", timeout=45000)
 
-            raw = page.evaluate(_SCRAPE_JS)
+            target = page
+            if "linkedin.com" in start_url:
+                job.message = "Following the LinkedIn apply link to the company portal…"
+                _set(job)
+                resolved = _resolve_linkedin(context, page)
+                if resolved is not None:
+                    target = resolved
+                else:
+                    job.message = (
+                        "Couldn't auto-open the company portal — this looks like "
+                        "LinkedIn Easy Apply or a login wall. The page is open; "
+                        "click Apply and complete it in the browser."
+                    )
+                    _set(job)
+
+            raw = target.evaluate(_SCRAPE_JS)
             fields = [
                 FormField(index=r["index"], tag=r["tag"], type=r["type"], label=r["label"])
                 for r in raw
             ]
             plan = build_plan(fields, profile, opportunity)
 
-            handles = page.query_selector_all("input, textarea, select")
+            handles = target.query_selector_all("input, textarea, select")
             for action in plan:
                 if action.index >= len(handles):
                     continue
@@ -187,14 +250,15 @@ def run_assisted_apply(
                 a.label for a in plan if a.needs_input and a.kind != "file"
             ]
             job.status = "awaiting_user"
-            job.message = (
-                "Autofill complete. Review the form, solve any CAPTCHA, answer "
-                "any highlighted questions, then submit in the browser window."
-            )
+            if not job.message or "click Apply" not in job.message:
+                job.message = (
+                    "Autofill complete. Review the form, solve any CAPTCHA, answer "
+                    "any highlighted questions, then submit in the browser window."
+                )
             _set(job)
 
             # Hold the browser open so the user can finish and submit.
-            page.wait_for_timeout(10 * 60 * 1000)  # up to 10 minutes
+            target.wait_for_timeout(10 * 60 * 1000)  # up to 10 minutes
             browser.close()
             if job.status == "awaiting_user":
                 job.status = "done"
@@ -203,6 +267,26 @@ def run_assisted_apply(
         job.status = "error"
         job.message = f"Apply failed: {exc}"
         _set(job)
+
+
+def run_assisted_apply(
+    job: ApplyJob,
+    opportunity: Opportunity,
+    profile: Profile,
+    headless: bool = False,
+) -> None:
+    """Autofill a stored opportunity's application page."""
+    _drive(job, opportunity.url, profile, opportunity, headless)
+
+
+def run_apply_url(
+    job: ApplyJob,
+    url: str,
+    profile: Profile,
+    headless: bool = False,
+) -> None:
+    """Autofill from an arbitrary job URL (LinkedIn link or a direct portal)."""
+    _drive(job, url, profile, None, headless)
 
 
 def start_apply(
@@ -216,6 +300,23 @@ def start_apply(
     thread = threading.Thread(
         target=run_assisted_apply,
         args=(job, opportunity, profile, headless),
+        daemon=True,
+    )
+    thread.start()
+    return job
+
+
+def start_apply_url(
+    job_id: str,
+    url: str,
+    profile: Profile,
+    headless: bool = False,
+) -> ApplyJob:
+    job = ApplyJob(id=job_id, opportunity_id=0)
+    _set(job)
+    thread = threading.Thread(
+        target=run_apply_url,
+        args=(job, url, profile, headless),
         daemon=True,
     )
     thread.start()

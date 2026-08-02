@@ -4,6 +4,7 @@ import ResumeUpload from "./components/ResumeUpload.jsx";
 import SearchForm from "./components/SearchForm.jsx";
 import OpportunityList from "./components/OpportunityList.jsx";
 import ApplyPanel from "./components/ApplyPanel.jsx";
+import ApplyFromLink from "./components/ApplyFromLink.jsx";
 import QuestionModal from "./components/QuestionModal.jsx";
 import Dashboard from "./components/Dashboard.jsx";
 
@@ -127,6 +128,37 @@ export default function App() {
     setDashKey((k) => k + 1); // newly-applied jobs appear on the dashboard
   }
 
+  async function applyFromLink(url) {
+    if (!profile) {
+      setError("Upload a resume first.");
+      return;
+    }
+    setError("");
+    let host = "job link";
+    try {
+      host = new URL(url).hostname.replace(/^www\./, "");
+    } catch (_) {
+      /* keep default */
+    }
+    try {
+      const res = await api.applyLink(url, profile.id);
+      const key = `link:${res.job_id}`;
+      setJobs((prev) => ({
+        ...prev,
+        [key]: {
+          oppId: key,
+          jobId: res.job_id,
+          company: host,
+          title: "Job from link",
+          status: res.status,
+          message: "",
+        },
+      }));
+    } catch (err) {
+      setError(`Couldn't apply from that link: ${err.message}`);
+    }
+  }
+
   async function saveAnswer(item, answer) {
     await api.answerQuestion(item.question, answer);
     setQuestionQueue((prev) => prev.filter((q) => q !== item));
@@ -188,6 +220,8 @@ export default function App() {
               Apply to selected ({selected.size})
             </button>
           </OpportunityList>
+
+          <ApplyFromLink disabled={!profile} onApply={applyFromLink} />
 
           <ApplyPanel jobs={jobs} />
 
