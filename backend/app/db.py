@@ -53,5 +53,15 @@ def init_db() -> None:
                 profile_json    TEXT NOT NULL,
                 created_at      TEXT NOT NULL DEFAULT (datetime('now'))
             );
+
+            -- One row per (calendar day, company) that discovery has spent
+            -- budget on. Enforces the "10 new companies per day" guardrail.
+            CREATE TABLE IF NOT EXISTS company_daily (
+                day           TEXT NOT NULL,
+                company_key   TEXT NOT NULL,
+                company_name  TEXT NOT NULL,
+                first_seen_at TEXT NOT NULL DEFAULT (datetime('now')),
+                PRIMARY KEY (day, company_key)
+            );
             """
         )
